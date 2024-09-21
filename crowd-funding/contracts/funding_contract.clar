@@ -1,30 +1,13 @@
-
 ;; title: funding_contract
-;; version:
-;; summary:
-;; description:
 
-;; traits
-;;
+;; version: 1
 
-;; token definitions
-;;
+;; summary: The contract handles crowdfunding campaigns by allowing users to create campaigns and donate STX tokens.
 
-;; constants
-;;
+;; description: This contract manages campaigns with information like title, description, target funding, deadline, and amount collected. 
+;; It allows donors to contribute and tracks donations. It also enables retrieving the details of campaigns and their donations.
 
-;; data vars
-;;
 
-;; data maps
-;;
 
-;; public functions
-;;
-
-;; read only functions
-;;
-
-;; private functions
-;;
+;; `number-of-campaigns` keeps track of how many campaigns have been created.
 
