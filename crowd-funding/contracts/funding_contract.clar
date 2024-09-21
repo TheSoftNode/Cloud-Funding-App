@@ -20,27 +20,26 @@
 (define-map campaigns
     uint
     { owner: principal,
-      title: (buff 200),
-      description: (buff 500),
+      title: (string-ascii 200),
+      description: (string-ascii 502),
       target: uint,
       deadline: uint,
-      amount-collected: uint,
-      image: (buff 200) 
+      amount_collected: uint,
+      image: (string-ascii 200) 
 })
 
 ;; Define a mapping to store the donators and their respective donations for each campaign.
 (define-map campaign-donators uint {donators: (list 100 principal), donations: (list 100 uint)})
 
 
-
 ;; Create a new campaign
 (define-public (create-campaign 
   (owner principal) 
-  (title (buff 200)) 
-  (description (buff 500)) 
+  (title (string-ascii 200)) 
+  (description (string-ascii 502)) 
   (target uint) 
   (deadline uint) 
-  (image (buff 200)))
+  (image (string-ascii 200)))
   (begin
     ;; Input validation
     (asserts! (and (> (len title) u0) (<= (len title) u200)) err-invalid-title) ;; Title must be non-empty and <= 200 bytes
@@ -58,8 +57,20 @@
           description: description, 
           target: target, 
           deadline: deadline, 
-          amount-collected: u0, 
+          amount_collected: u0, 
           image: image })
       (var-set number-of-campaigns (+ campaign-id u1)) ;; Increment the number of campaigns
       (ok campaign-id))))
 
+
+
+(define-read-only (get-campaign (campaign-id uint))
+  (match (map-get? campaigns campaign-id)
+    campaign (ok campaign) ;; If campaign is found, return it wrapped in `ok`
+    (err u101) ;; If not found, return an error response
+  )
+)
+
+;; (define-read-only (get-campaign (campaign-id uint))
+;;     (map-get? campaigns campaign-id) ;; Retrieve the campaign from the campaigns map
+;; )
