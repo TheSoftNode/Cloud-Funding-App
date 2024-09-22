@@ -1,8 +1,8 @@
 import { BadRequestException, Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
-import { RegisterResponse } from './types/user.types';
-import { RegisterDto } from './dtos/user.dto';
+import { ActivationResponse, RegisterResponse } from './types/user.types';
+import { ActivationDto, RegisterDto } from './dtos/user.dto';
 
 @Resolver('User')
 export class AppResolver {
@@ -26,4 +26,14 @@ export class AppResolver {
 
         return { activation_token, activationCode };
     }
+
+    @Mutation(() => ActivationResponse)
+    async activateUser(
+        @Args('activationDto') activationDto: ActivationDto,
+        @Context() context: { res: Response },
+    ): Promise<ActivationResponse>
+    {
+        return await this.userService.activateUser(activationDto, context.res);
+    }
+
 }
