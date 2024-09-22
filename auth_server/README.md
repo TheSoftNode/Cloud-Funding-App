@@ -11,7 +11,7 @@ This is an overview of the authentication module for the Crowdfunding App built 
 - Password reset functionality
 - Secure password storage using bcrypt
 - Integration with Gmail for email notifications
-```
+
 ## Endpoints
 
 ### 1. User Registration
