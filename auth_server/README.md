@@ -1,18 +1,18 @@
-**Crowdfunding App - Authentication Module**
+# Crowdfunding App - Authentication Module
 
-**Overview**
+## Overview
 
 This is an overview of the authentication module for the Crowdfunding App built using NestJS, GraphQL, Prisma, MongoDB, and Gmail for email services. The authentication module includes user registration, login, email verification, password reset, and user management functionalities.
 
-**Features**
+## Features
 
 - User registration with email verification
 - User login with JWT authentication
 - Password reset functionality
 - Secure password storage using bcrypt
 - Integration with Gmail for email notifications
-
-**Endpoints**
+```
+## Endpoints
 
 ### 1. User Registration
 
