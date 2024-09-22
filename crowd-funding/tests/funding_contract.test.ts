@@ -1,21 +1,329 @@
-
 import { describe, expect, it } from "vitest";
+import { Cl, tupleCV } from "@stacks/transactions";
 
 const accounts = simnet.getAccounts();
-const address1 = accounts.get("wallet_1")!;
+const wallet = accounts.get("wallet_1")!;
+const futureDeadline = simnet.blockHeight + 10; // Set a future deadline for testing
 
-/*
-  The test below is an example. To learn more, read the testing documentation here:
-  https://docs.hiro.so/stacks/clarinet-js-sdk
-*/
-
-describe("example tests", () => {
-  it("ensures simnet is well initalised", () => {
-    expect(simnet.blockHeight).toBeDefined();
+describe("funding_contract contract", () => {
+  
+  it("creates a campaign successfully", () => {
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Test Campaign"),
+        Cl.stringAscii("A campaign for testing."),
+        Cl.uint(1000), // Valid target
+        Cl.uint(futureDeadline), // Valid future deadline
+        Cl.stringAscii("https://example.com/image.png"), // Valid image URL
+      ],
+      wallet
+    );
+    // Check if the campaign was created successfully and returns the first ID (0)
+    expect(createCampaignCall.result).toBeOk(Cl.uint(0));
   });
 
-  // it("shows an example", () => {
-  //   const { result } = simnet.callReadOnlyFn("counter", "get-counter", [], address1);
-  //   expect(result).toBeUint(0);
-  // });
+  it("fails to create a campaign with an invalid title (empty)", () => {
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii(""), // Invalid empty title
+        Cl.stringAscii("A campaign for testing."),
+        Cl.uint(1000), // Valid target
+        Cl.uint(futureDeadline), // Valid future deadline
+        Cl.stringAscii("https://example.com/image.png"),
+      ],
+      wallet
+    );
+    expect(createCampaignCall.result).toBeErr(Cl.uint(200)); // Expecting err-invalid-title (code 200)
+  });
+
+  it("fails to create a campaign with an invalid description (too long)", () => {
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Test Campaign"),
+        Cl.stringAscii("A".repeat(501)), // Description exceeding 500 characters
+        Cl.uint(1000), // Valid target
+        Cl.uint(futureDeadline), // Valid future deadline
+        Cl.stringAscii("https://example.com/image.png"),
+      ],
+      wallet
+    );
+    expect(createCampaignCall.result).toBeErr(Cl.uint(201)); // Expecting err-invalid-description (code 201)
+  });
+
+  it("fails to create a campaign with an invalid target (zero)", () => {
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Test Campaign"),
+        Cl.stringAscii("A campaign for testing."),
+        Cl.uint(0), // Invalid target (zero)
+        Cl.uint(futureDeadline), // Valid future deadline
+        Cl.stringAscii("https://example.com/image.png"),
+      ],
+      wallet
+    );
+    expect(createCampaignCall.result).toBeErr(Cl.uint(202)); // Expecting err-invalid-target (code 202)
+  });
+
+  it("fails to create a campaign with an invalid deadline (in the past)", () => {
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Test Campaign"),
+        Cl.stringAscii("A campaign for testing."),
+        Cl.uint(1000), // Valid target
+        Cl.uint(simnet.blockHeight - 1), // Invalid past deadline
+        Cl.stringAscii("https://example.com/image.png"),
+      ],
+      wallet
+    );
+    expect(createCampaignCall.result).toBeErr(Cl.uint(203)); // Expecting err-invalid-deadline (code 203)
+  });
+
+  it("retrieves a created campaign correctly", async () => {
+    // Step 1: Create the campaign first
+    const createCampaignCall = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Test Campaign"),
+        Cl.stringAscii("A campaign for testing."),
+        Cl.uint(1000),
+        Cl.uint(futureDeadline),
+        Cl.stringAscii("https://example.com/image.png"),
+      ],
+      wallet
+    );
+    expect(createCampaignCall.result).toBeOk(Cl.uint(0)); // Expect campaign ID 0
+
+    // Step 2: Retrieve the campaign
+    const getCampaignCall = simnet.callReadOnlyFn(
+      "funding_contract",
+      "get-campaign",
+      [Cl.uint(0)], // Fetch campaign with ID 0
+      wallet
+    );
+
+    expect(getCampaignCall.result).toBeOk(
+      tupleCV({
+        owner: Cl.principal(wallet), // Owner
+        title: Cl.stringAscii("Test Campaign"), // Title
+        description: Cl.stringAscii("A campaign for testing."), // Description
+        target: Cl.uint(1000), // Target
+        deadline: Cl.uint(futureDeadline), // Deadline
+        amount_collected: Cl.uint(0), // Amount collected
+        image: Cl.stringAscii("https://example.com/image.png"), // Image
+      })
+    );
+  });
+
+  it("fails to retrieve a non-existent campaign", () => {
+    const getCampaignCall = simnet.callReadOnlyFn(
+      "funding_contract",
+      "get-campaign",
+      [Cl.uint(1)], // No campaign exists with ID 1
+      wallet
+    );
+    expect(getCampaignCall.result).toBeErr(Cl.uint(101)); // Expecting campaign not found error (code 101)
+  });
+
+  it("creates multiple campaigns and ensures unique IDs", () => {
+    // Step 1: Create the first campaign
+    const createCampaign1 = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Campaign 1"),
+        Cl.stringAscii("First campaign."),
+        Cl.uint(500),
+        Cl.uint(futureDeadline),
+        Cl.stringAscii("https://example.com/image1.png"),
+      ],
+      wallet
+    );
+    expect(createCampaign1.result).toBeOk(Cl.uint(0)); // First campaign ID is 0
+
+    // Step 2: Create the second campaign
+    const createCampaign2 = simnet.callPublicFn(
+      "funding_contract",
+      "create-campaign",
+      [
+        Cl.principal(wallet),
+        Cl.stringAscii("Campaign 2"),
+        Cl.stringAscii("Second campaign."),
+        Cl.uint(2000),
+        Cl.uint(futureDeadline + 5), // Slightly later deadline
+        Cl.stringAscii("https://example.com/image2.png"),
+      ],
+      wallet
+    );
+    expect(createCampaign2.result).toBeOk(Cl.uint(1)); // Second campaign ID should be 1
+  });
 });
+
+
+
+// import { describe, expect, it } from "vitest";
+// import { Cl, tupleCV } from "@stacks/transactions";
+
+// const accounts = simnet.getAccounts();
+// const wallet = accounts.get("wallet_1")!;
+// const futureDeadline = simnet.blockHeight + 10; // Set a future deadline for testing
+
+// describe("funding_contract contract", () =>
+// {
+//   it("ensures simnet is well initialized", () =>
+//   {
+//     expect(simnet.blockHeight).toBeDefined();
+//   });
+
+//   it("ensures the funding_contract contract is deployed", () =>
+//   {
+//     const contractSource = simnet.getContractSource("funding_contract");
+//     expect(contractSource).toBeDefined();
+//   });
+
+//   it("creates a campaign successfully", () =>
+//   {
+//     const createCampaignCall = simnet.callPublicFn(
+//       "funding_contract",
+//       "create-campaign",
+//       [
+//         Cl.principal(wallet),
+//         Cl.stringAscii("Test Campaign"),
+//         Cl.stringAscii("A campaign for testing."),
+//         Cl.uint(1000), // Use Cl.uint for the target
+//         Cl.uint(futureDeadline), // Use Cl.uint for the deadline
+//         Cl.stringAscii("https://example.com/image.png"),
+//       ],
+//       wallet
+//     );
+//     expect(createCampaignCall.result).toBeOk(Cl.uint(0)); // Expecting the campaign ID to be 0
+//   });
+
+//   it("retrieves campaign information correctly", async () => {
+//   // Step 1: Create the campaign first
+//   const createCampaignCall = simnet.callPublicFn(
+//     "funding_contract",
+//     "create-campaign",
+//     [
+//       Cl.stringAscii("Test Campaign"),
+//       Cl.stringAscii("A campaign for testing."),
+//       Cl.uint(1000),
+//       Cl.uint(futureDeadline),
+//       Cl.stringAscii("https://example.com/image.png")
+//     ],
+//     wallet
+//   );
+
+//   expect(createCampaignCall.result).toBeOk(Cl.uint(0)); // Check if the campaign was created successfully
+
+//   // Step 2: Retrieve the campaign
+//   const getCampaignCall = simnet.callReadOnlyFn(
+//     "funding_contract",
+//     "get-campaign",
+//     [Cl.uint(0)], // Assuming the ID is 0 for the first campaign
+//     wallet
+//   );
+
+//   expect(getCampaignCall.result).toBeOk(
+//     tupleCV({
+//       owner: Cl.principal(wallet), // Owner
+//       title: Cl.stringAscii("Test Campaign"), // Title
+//       description: Cl.stringAscii("A campaign for testing."), // Description
+//       target: Cl.uint(1000), // Target
+//       deadline: Cl.uint(futureDeadline), // Deadline
+//       amount_collected: Cl.uint(0), // Amount collected
+//       image: Cl.stringAscii("https://example.com/image.png"), // Image
+//     })
+//   );
+// });
+
+//   // it("retrieves campaign information correctly", () =>
+//   //   {
+//   //     const getCampaignCall = simnet.callReadOnlyFn(
+//   //       "funding_contract",
+//   //       "get-campaign",
+//   //       [Cl.uint(0)],
+//   //       wallet
+//   //     );
+  
+//   //     expect(getCampaignCall.result).toBeOk(
+//   //       tupleCV({
+//   //         owner: Cl.principal(wallet), // Owner
+//   //         title: Cl.stringAscii("Test Campaign"), // Title
+//   //         description: Cl.stringAscii("A campaign for testing."), // Description
+//   //         target: Cl.uint(1000), // Target
+//   //         deadline: Cl.uint(futureDeadline), // Deadline
+//   //         amount_collected: Cl.uint(0), // Amount collected
+//   //         image: Cl.stringAscii("https://example.com/image.png"), // Image
+//   //       })
+//   //     );
+//   //   });
+
+//   it("fails to create a campaign with an invalid title", () =>
+//   {
+//     const createCampaignCall = simnet.callPublicFn(
+//       "funding_contract",
+//       "create-campaign",
+//       [
+//         Cl.principal(wallet),
+//         Cl.stringAscii(""),
+//         Cl.stringAscii("A campaign for testing."),
+//         Cl.uint(1000),
+//         Cl.uint(futureDeadline),
+//         Cl.stringAscii("https://example.com/image.png"),
+//       ],
+//       wallet
+//     );
+//     expect(createCampaignCall.result).toBeErr(Cl.uint(200)); // Expecting invalid title error
+//   });
+
+//   it("fails to create a campaign with a past deadline", () =>
+//   {
+//     const createCampaignCall = simnet.callPublicFn(
+//       "funding_contract",
+//       "create-campaign",
+//       [
+//         Cl.principal(wallet),
+//         Cl.stringAscii("Test Campaign"),
+//         Cl.stringAscii("A campaign for testing."),
+//         Cl.uint(1000),
+//         Cl.uint(simnet.blockHeight - 1), // Use Cl.uint for the past deadline
+//         Cl.stringAscii("https://example.com/image.png"),
+//       ],
+//       wallet
+//     );
+//     expect(createCampaignCall.result).toBeErr(Cl.uint(203)); // Expecting invalid deadline error
+//   });
+
+
+
+ 
+
+//   it("fails to retrieve a non-existent campaign", () =>
+//   {
+//     const getCampaignCall = simnet.callReadOnlyFn(
+//       "funding_contract",
+//       "get-campaign",
+//       [Cl.uint(1)],
+//       wallet
+//     );
+//     expect(getCampaignCall.result).toBeErr(Cl.uint(101)); // Expecting campaign not found error
+//   });
+// });
