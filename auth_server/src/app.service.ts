@@ -3,10 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService, JwtVerifyOptions } from '@nestjs/jwt';
 import { PrismaService } from 'prisma/prisma.service';
 import { EmailService } from './email/email.service';
-import { ActivationDto, ForgotPasswordDto, LoginDto, RegisterDto } from './dtos/user.dto';
+import { ActivationDto, ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './dtos/user.dto';
 import * as bcrypt from 'bcrypt';
 import { TokenSender } from './utils/send-token';
 import { User } from '@prisma/client';
+import { ResetPasswordResponse } from './types/user.types';
 
 
 interface UserData
@@ -18,8 +19,9 @@ interface UserData
 }
 
 @Injectable()
-export class AppService {
-  
+export class AppService
+{
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
@@ -88,25 +90,25 @@ export class AppService {
     return { activation_token, activationCode, response };
   }
 
-   // create activation token
-   async createActivationToken(user: UserData)
-   {
-     const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
- 
-     const token = this.jwtService.sign(
-       {
-         user,
-         activationCode,
-       },
-       {
-         secret: this.configService.get<string>('ACTIVATION_SECRET'),
-         expiresIn: '5m',
-       },
-     );
-     return { token, activationCode };
-   }
+  // create activation token
+  async createActivationToken(user: UserData)
+  {
+    const activationCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-    // activation user
+    const token = this.jwtService.sign(
+      {
+        user,
+        activationCode,
+      },
+      {
+        secret: this.configService.get<string>('ACTIVATION_SECRET'),
+        expiresIn: '5m',
+      },
+    );
+    return { token, activationCode };
+  }
+
+  // activation user
   async activateUser(activationDto: ActivationDto, response: Response)
   {
     const { activationToken, activationCode } = activationDto;
@@ -146,8 +148,9 @@ export class AppService {
     return { user, response };
   }
 
-   // Login service
-   async Login(loginDto: LoginDto) {
+  // Login service
+  async Login(loginDto: LoginDto)
+  {
     const { email, password } = loginDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -155,10 +158,12 @@ export class AppService {
       },
     });
 
-    if (user && (await this.comparePassword(password, user.password))) {
+    if (user && (await this.comparePassword(password, user.password)))
+    {
       const tokenSender = new TokenSender(this.configService, this.jwtService);
       return tokenSender.sendToken(user);
-    } else {
+    } else
+    {
       return {
         user: null,
         accessToken: null,
@@ -170,16 +175,18 @@ export class AppService {
     }
   }
 
-   // compare with hashed password
-   async comparePassword(
+  // compare with hashed password
+  async comparePassword(
     password: string,
     hashedPassword: string,
-  ): Promise<boolean> {
+  ): Promise<boolean>
+  {
     return await bcrypt.compare(password, hashedPassword);
   }
 
-   // get logged in user
-  async getLoggedInUser(req: any) {
+  // get logged in user
+  async getLoggedInUser(req: any)
+  {
     const user = req.user;
     const refreshToken = req.refreshtoken;
     const accessToken = req.accesstoken;
@@ -187,7 +194,8 @@ export class AppService {
   }
 
   // log out user
-  async Logout(req: any) {
+  async Logout(req: any)
+  {
     req.user = null;
     req.refreshtoken = null;
     req.accesstoken = null;
@@ -195,12 +203,14 @@ export class AppService {
   }
 
   // get all users service
-  async getUsers() {
+  async getUsers()
+  {
     return this.prisma.user.findMany({});
   }
 
   // generate forgot password link
-  async generateForgotPasswordLink(user: User) {
+  async generateForgotPasswordLink(user: User)
+  {
     const forgotPasswordToken = this.jwtService.sign(
       {
         user,
@@ -214,7 +224,8 @@ export class AppService {
   }
 
   // forgot password
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto)
+  {
     const { email } = forgotPasswordDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -222,7 +233,8 @@ export class AppService {
       },
     });
 
-    if (!user) {
+    if (!user)
+    {
       throw new BadRequestException('User not found with this email!');
     }
     const forgotPasswordToken = await this.generateForgotPasswordLink(user);
@@ -239,9 +251,33 @@ export class AppService {
       activationCode: resetPasswordUrl,
     });
 
-    return {forgotPasswordToken, message: `Your forgot password request succesful!` };
+    return { forgotPasswordToken, message: `Your forgot password request succesful!` };
   }
 
+  // reset password
+  async resetPassword(resetPasswordDto: ResetPasswordDto)
+  {
+    const { password, activationToken } = resetPasswordDto;
 
+    const decoded = await this.jwtService.decode(activationToken);
+
+    if (!decoded || decoded?.exp * 1000 < Date.now())
+    {
+      throw new BadRequestException('Invalid token!');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await this.prisma.user.update({
+      where: {
+        id: decoded.user.id,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return { user };
+  }
 
 }
