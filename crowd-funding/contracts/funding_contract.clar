@@ -61,9 +61,7 @@
           image: image })
       (var-set number-of-campaigns (+ campaign-id u1)) ;; Increment the number of campaigns
       (ok campaign-id))))
-
-
-
+      
 (define-read-only (get-campaign (campaign-id uint))
   (match (map-get? campaigns campaign-id)
     campaign (ok campaign) ;; If campaign is found, return it wrapped in `ok`
