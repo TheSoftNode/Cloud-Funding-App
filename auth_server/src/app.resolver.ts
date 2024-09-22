@@ -1,9 +1,10 @@
 import { BadRequestException, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { ActivationResponse, ForgotPasswordResponse, LoginResponse, LogoutResposne, RegisterResponse } from './types/user.types';
-import { ActivationDto, ForgotPasswordDto, RegisterDto } from './dtos/user.dto';
+import { ActivationResponse, ForgotPasswordResponse, LoginResponse, LogoutResposne, RegisterResponse, ResetPasswordResponse } from './types/user.types';
+import { ActivationDto, ForgotPasswordDto, RegisterDto, ResetPasswordDto } from './dtos/user.dto';
 import { AuthGuard } from './guards/auth.gaurd';
+import { User } from './entities/user.entities';
 
 @Resolver('User')
 export class AppResolver {
@@ -66,6 +67,20 @@ export class AppResolver {
     ): Promise<ForgotPasswordResponse>
     {
         return await this.userService.forgotPassword(forgotPasswordDto);
+    }
+
+    @Mutation(() => ResetPasswordResponse)
+    async resetPassword(
+        @Args('resetPasswordDto') resetPasswordDto: ResetPasswordDto,
+    ): Promise<ResetPasswordResponse>
+    {
+        return await this.userService.resetPassword(resetPasswordDto);
+    }
+
+    @Query(() => [User])
+    async getUsers()
+    {
+        return this.userService.getUsers();
     }
 
 
