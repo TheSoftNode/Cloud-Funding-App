@@ -1,5 +1,3 @@
-```markdown
-
 **Crowdfunding App - Authentication Module**
 
 **Overview**
@@ -150,4 +148,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [GraphQL Documentation](https://graphql.org/)
 - [Prisma Documentation](https://www.prisma.io/docs)
-```
