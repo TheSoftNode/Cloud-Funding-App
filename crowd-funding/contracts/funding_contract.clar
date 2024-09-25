@@ -14,6 +14,8 @@
 (define-constant err-map-set-failed (err u205))
 (define-constant err-invalid-amount (err u206))
 (define-constant err-transfer-failed (err u207))
+(define-constant err-too-many-donators (err u208))
+(define-constant err-too-many-donations (err u209))
 
 
 ;; Data variable to track the total number of campaigns created, used for generating unique campaign IDs.
@@ -87,6 +89,7 @@
 )
 
 
+
 (define-public (donate-to-campaign (campaign-id uint))
   (let
     (
@@ -96,25 +99,25 @@
         { donators: (list), donations: (list) } 
         (map-get? campaign-donators campaign-id)))
     )
-    (asserts! (> amount u1) (err err-invalid-amount))
+    (asserts! (> amount u0) (err err-invalid-amount))
     (let
       (
-        (new-donators (as-max-len? (append (get donators campaign-donators-data) tx-sender) u100))
-        (new-donations (as-max-len? (append (get donations campaign-donators-data) amount) u100))
+        (new-donators (unwrap! (as-max-len? (append (get donators campaign-donators-data) tx-sender) u100) (err err-too-many-donators)))
+        (new-donations (unwrap! (as-max-len? (append (get donations campaign-donators-data) amount) u100) (err err-too-many-donations)))
         (new-amount-collected (+ (get amount_collected campaign) amount))
       )
       (match (stx-transfer? amount tx-sender (get owner campaign))
         success 
           (begin
-            (asserts! (map-set campaigns campaign-id
-                        (merge campaign { amount_collected: new-amount-collected }))
-                      (err err-map-set-failed))
-            (asserts! (map-set campaign-donators campaign-id
-                        { donators: (unwrap-panic new-donators), 
-                          donations: (unwrap-panic new-donations) })
-                      (err err-map-set-failed))
+            (map-set campaigns campaign-id
+              (merge campaign { amount_collected: new-amount-collected }))
+            (map-set campaign-donators campaign-id
+              { donators: new-donators, 
+                donations: new-donations })
             (ok true))
         error (err err-transfer-failed))
     )
   )
 )
+
+
