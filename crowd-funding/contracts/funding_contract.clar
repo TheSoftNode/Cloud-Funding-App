@@ -2,7 +2,7 @@
 
 ;; Errors
 (define-constant  err-deadline-in-past (err u100))
-(define-constant err-campaign-not-found (err u101))
+(define-constant err-campaign-not-found (err u404))
 (define-constant err-send-funds-failed (err u102))
 (define-constant err-invalid-owner (err u205))
 (define-constant err-invalid-title (err u200))
@@ -96,7 +96,7 @@
         { donators: (list), donations: (list) } 
         (map-get? campaign-donators campaign-id)))
     )
-    (asserts! (> amount u0) (err err-invalid-amount))
+    (asserts! (> amount u1) (err err-invalid-amount))
     (let
       (
         (new-donators (as-max-len? (append (get donators campaign-donators-data) tx-sender) u100))
