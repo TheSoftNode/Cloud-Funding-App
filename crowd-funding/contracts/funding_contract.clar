@@ -10,6 +10,10 @@
 (define-constant err-invalid-target (err u202))
 (define-constant err-invalid-deadline (err u203))
 (define-constant err-invalid-image (err u204))
+(define-constant err-list-full (err u3))
+(define-constant err-map-set-failed (err u205))
+(define-constant err-invalid-amount (err u206))
+(define-constant err-transfer-failed (err u207))
 
 
 ;; Data variable to track the total number of campaigns created, used for generating unique campaign IDs.
@@ -69,6 +73,48 @@
   )
 )
 
-;; (define-read-only (get-campaign (campaign-id uint))
-;;     (map-get? campaigns campaign-id) ;; Retrieve the campaign from the campaigns map
-;; )
+
+(define-read-only (get-donators (campaign-id uint))
+  (let
+    ((campaign-donators-data (default-to 
+      { donators: (list), donations: (list) } 
+      (map-get? campaign-donators campaign-id))))
+    (ok {
+      donators: (get donators campaign-donators-data),
+      donations: (get donations campaign-donators-data)
+    })
+  )
+)
+
+
+(define-public (donate-to-campaign (campaign-id uint))
+  (let
+    (
+      (amount (stx-get-balance tx-sender))
+      (campaign (unwrap! (map-get? campaigns campaign-id) (err err-campaign-not-found)))
+      (campaign-donators-data (default-to 
+        { donators: (list), donations: (list) } 
+        (map-get? campaign-donators campaign-id)))
+    )
+    (asserts! (> amount u0) (err err-invalid-amount))
+    (let
+      (
+        (new-donators (as-max-len? (append (get donators campaign-donators-data) tx-sender) u100))
+        (new-donations (as-max-len? (append (get donations campaign-donators-data) amount) u100))
+        (new-amount-collected (+ (get amount_collected campaign) amount))
+      )
+      (match (stx-transfer? amount tx-sender (get owner campaign))
+        success 
+          (begin
+            (asserts! (map-set campaigns campaign-id
+                        (merge campaign { amount_collected: new-amount-collected }))
+                      (err err-map-set-failed))
+            (asserts! (map-set campaign-donators campaign-id
+                        { donators: (unwrap-panic new-donators), 
+                          donations: (unwrap-panic new-donations) })
+                      (err err-map-set-failed))
+            (ok true))
+        error (err err-transfer-failed))
+    )
+  )
+)
