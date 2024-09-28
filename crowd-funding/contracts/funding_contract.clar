@@ -174,6 +174,36 @@
            { title: new-title, 
              description: new-description, 
              image: new-image })))))
+             
+
+(define-public (withdraw-funds (campaign-id uint))
+  (let (
+    (campaign (unwrap! (map-get? campaigns campaign-id) err-campaign-not-found))
+    (amount-collected (get amount_collected campaign))
+    (target (get target campaign))
+    (deadline (get deadline campaign))
+    (owner (get owner campaign))
+  )
+    ;; Check if the caller is the campaign owner
+    (asserts! (is-eq tx-sender owner) err-invalid-owner)
+    
+    ;; Check if the deadline has passed
+    (asserts! (> block-height deadline) err-invalid-deadline)
+    
+    ;; Check if the target has been met
+    (asserts! (>= amount-collected target) err-invalid-amount)
+    
+    ;; Attempt to transfer the funds to the campaign owner
+    (match (as-contract (stx-transfer? amount-collected tx-sender owner))
+      success 
+        (begin
+          ;; Update the campaign to show funds have been withdrawn
+          (map-set campaigns campaign-id
+            (merge campaign { amount_collected: u0 }))
+          (ok true))
+      error err-transfer-failed)
+  )
+)
 
 
 
