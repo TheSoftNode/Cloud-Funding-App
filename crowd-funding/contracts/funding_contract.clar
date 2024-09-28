@@ -14,8 +14,6 @@
 (define-constant err-map-set-failed (err u205))
 (define-constant err-invalid-amount (err u206))
 (define-constant err-transfer-failed (err u207))
-(define-constant err-too-many-donators (err u208))
-(define-constant err-too-many-donations (err u209))
 
 
 ;; Data variable to track the total number of campaigns created, used for generating unique campaign IDs.
@@ -95,54 +93,6 @@
       }))
     ;; If the campaign is not found, return an error
     err-campaign-not-found
-  )
-)
-
-
-
-(define-public (donate-to-campaign (campaign-id uint))
-  (let
-    (
-      ;; Get the donation amount from the sender's STX balance
-      (amount (stx-get-balance tx-sender))
-      ;; Retrieve the campaign details or return an error if not found
-      (campaign (unwrap! (map-get? campaigns campaign-id) (err err-campaign-not-found)))
-      ;; Get current donators and donations, initializing if none exist
-      (campaign-donators-data (default-to 
-        { donators: (list), donations: (list) } 
-        (map-get? campaign-donators campaign-id)))
-    )
-
-    ;; Validate the donation amount
-    (asserts! (> amount u0) (err err-invalid-amount))
-
-    ;; Calculate new donators and donations
-    (let
-      (
-        (current-donators (get donators campaign-donators-data))
-        (current-donations (get donations campaign-donators-data))
-        ;; Append the sender to the list of donators
-        (updated-donators (unwrap! (as-max-len? (append current-donators tx-sender) u100) (err err-too-many-donators)))
-        ;; Append the amount to the list of donations
-        (updated-donations (unwrap! (as-max-len? (append current-donations amount) u100) (err err-too-many-donations)))
-        ;; Calculate the new total amount collected for the campaign
-        (new-amount-collected (+ (get amount_collected campaign) amount))
-      )
-      ;; Attempt to transfer the funds to the campaign owner
-      (match (stx-transfer? amount tx-sender (get owner campaign))
-        success 
-          (begin
-            ;; Update the campaign with the new amount collected
-            (map-set campaigns campaign-id
-              (merge campaign { amount_collected: new-amount-collected }))
-            ;; Update the list of donators and their donations
-            (map-set campaign-donators campaign-id
-              { donators: updated-donators, 
-                donations: updated-donations })
-            ;; Return success response
-            (ok true))
-        error (err err-transfer-failed)) ;; Handle transfer failure
-    )
   )
 )
 
