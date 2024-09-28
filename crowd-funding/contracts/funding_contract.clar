@@ -14,6 +14,8 @@
 (define-constant err-map-set-failed (err u205))
 (define-constant err-invalid-amount (err u206))
 (define-constant err-transfer-failed (err u207))
+(define-constant err-too-many-donators (err u208))
+(define-constant err-too-many-donations (err u209))
 
 
 ;; Data variable to track the total number of campaigns created, used for generating unique campaign IDs.
@@ -69,8 +71,6 @@
       
 
 
-
-
 (define-read-only (get-campaign (campaign-id uint))
   (match (map-get? campaigns campaign-id)
     campaign (ok campaign) ;; If campaign is found, return it wrapped in `ok`
@@ -95,5 +95,85 @@
     err-campaign-not-found
   )
 )
+
+(define-public (donate-to-campaign (campaign-id uint))
+  (let
+    (
+      ;; Get the donation amount from the sender's STX balance
+      (amount (stx-get-balance tx-sender))
+      ;; Retrieve the campaign details or return an error if not found
+      (campaign (unwrap! (map-get? campaigns campaign-id) (err err-campaign-not-found)))
+      ;; Get current donators and donations, initializing if none exist
+      (campaign-donators-data (default-to 
+        { donators: (list), donations: (list) } 
+        (map-get? campaign-donators campaign-id)))
+    )
+
+    ;; Validate the donation amount
+    (asserts! (> amount u0) (err err-invalid-amount))
+
+    ;; Calculate new donators and donations
+    (let
+      (
+        (current-donators (get donators campaign-donators-data))
+        (current-donations (get donations campaign-donators-data))
+        ;; Append the sender to the list of donators
+        (updated-donators (unwrap! (as-max-len? (append current-donators tx-sender) u100) (err err-too-many-donators)))
+        ;; Append the amount to the list of donations
+        (updated-donations (unwrap! (as-max-len? (append current-donations amount) u100) (err err-too-many-donations)))
+        ;; Calculate the new total amount collected for the campaign
+        (new-amount-collected (+ (get amount_collected campaign) amount))
+      )
+      ;; Attempt to transfer the funds to the campaign owner
+      (match (stx-transfer? amount tx-sender (get owner campaign))
+        success 
+          (begin
+            ;; Update the campaign with the new amount collected
+            (map-set campaigns campaign-id
+              (merge campaign { amount_collected: new-amount-collected }))
+            ;; Update the list of donators and their donations
+            (map-set campaign-donators campaign-id
+              { donators: updated-donators, 
+                donations: updated-donations })
+
+            (ok true))
+        error (err err-transfer-failed)) ;; Handle transfer failure
+    )
+  )
+)
+
+
+
+(define-read-only (check-campaign-status (campaign-id uint))
+  (match (map-get? campaigns campaign-id)
+    campaign
+      (let ((amount-collected (get amount_collected campaign))
+            (target (get target campaign))
+            (deadline (get deadline campaign)))
+        (if (> block-height deadline)
+          (if (>= amount-collected target)
+            (ok "Campaign succeeded")
+            (ok "Campaign failed"))
+          (ok "Campaign is ongoing")))
+    (err err-campaign-not-found)
+  )
+)
+
+(define-public (update-campaign 
+  (campaign-id uint)
+  (new-title (string-ascii 200))
+  (new-description (string-ascii 502))
+  (new-image (string-ascii 200)))
+  (let ((campaign (unwrap! (map-get? campaigns campaign-id) err-campaign-not-found)))
+
+    ;; Check if the caller is the campaign owner
+    (asserts! (is-eq tx-sender (get owner campaign)) err-invalid-owner)
+    
+    ;; Update the campaign
+    (ok (map-set campaigns campaign-id 
+         (merge campaign 
+           { title: new-title, 
+             description: new-description, 
+             image: new-image })))))
 
 
