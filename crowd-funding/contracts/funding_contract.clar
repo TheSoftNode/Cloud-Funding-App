@@ -158,5 +158,23 @@
   )
 )
 
+(define-public (update-campaign 
+  (campaign-id uint)
+  (new-title (string-ascii 200))
+  (new-description (string-ascii 502))
+  (new-image (string-ascii 200)))
+  (let ((campaign (unwrap! (map-get? campaigns campaign-id) err-campaign-not-found)))
+
+    ;; Check if the caller is the campaign owner
+    (asserts! (is-eq tx-sender (get owner campaign)) err-invalid-owner)
+    
+    ;; Update the campaign
+    (ok (map-set campaigns campaign-id 
+         (merge campaign 
+           { title: new-title, 
+             description: new-description, 
+             image: new-image })))))
+
+
 
   
