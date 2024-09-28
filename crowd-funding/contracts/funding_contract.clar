@@ -93,6 +93,7 @@
         donators: (get donators campaign-donators-data),
         donations: (get donations campaign-donators-data)
       }))
+    ;; If the campaign is not found, return an error
     err-campaign-not-found
   )
 )
@@ -138,13 +139,12 @@
             (map-set campaign-donators campaign-id
               { donators: updated-donators, 
                 donations: updated-donations })
-
+            ;; Return success response
             (ok true))
         error (err err-transfer-failed)) ;; Handle transfer failure
     )
   )
 )
-
 
 
 (define-read-only (check-campaign-status (campaign-id uint))
@@ -162,21 +162,5 @@
   )
 )
 
-(define-public (update-campaign 
-  (campaign-id uint)
-  (new-title (string-ascii 200))
-  (new-description (string-ascii 502))
-  (new-image (string-ascii 200)))
-  (let ((campaign (unwrap! (map-get? campaigns campaign-id) err-campaign-not-found)))
-
-    ;; Check if the caller is the campaign owner
-    (asserts! (is-eq tx-sender (get owner campaign)) err-invalid-owner)
-    
-    ;; Update the campaign
-    (ok (map-set campaigns campaign-id 
-         (merge campaign 
-           { title: new-title, 
-             description: new-description, 
-             image: new-image })))))
 
 
