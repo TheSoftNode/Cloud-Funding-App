@@ -52,6 +52,6 @@ plan:
         - emulated-contract-publish:
             contract-name: funding_contract
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/funding_contract.clar
+            path: "contracts\\funding_contract.clar"
             clarity-version: 2
       epoch: "2.5"
