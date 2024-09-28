@@ -1,73 +1,150 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# Crowdfunding App - Authentication Module
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Overview
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+This is an overview of the authentication module for the Crowdfunding App built using NestJS, GraphQL, Prisma, MongoDB, and Gmail for email services. The authentication module includes user registration, login, email verification, password reset, and user management functionalities.
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- User registration with email verification
+- User login with JWT authentication
+- Password reset functionality
+- Secure password storage using bcrypt
+- Integration with Gmail for email notifications
+
+## Endpoints
+
+### 1. User Registration
+
+**Endpoint:** `POST /auth/register`
+
+**Description:** Registers a new user and sends an activation email.
+
+**Request Body:**
+```json
+{
+  "name": "string",
+  "email": "string",
+  "password": "string",
+  "phone_number": "number"
+}
+```
+
+### 2. User Activation
+
+**Endpoint:** `POST /auth/activate`
+
+**Description:** Activates a user account using an activation token and activation code.
+
+**Request Body:**
+```json
+{
+  "activationToken": "string",
+  "activationCode": "string"
+}
+```
+
+### 3. User Login
+
+**Endpoint:** `POST /auth/login`
+
+**Description:** Authenticates a user and returns access and refresh tokens.
+
+**Request Body:**
+```json
+{
+  "email": "string",
+  "password": "string"
+}
+```
+
+### 4. Get Logged-In User
+
+**Endpoint:** `GET /auth/me`
+
+**Description:** Retrieves the currently logged-in user's information.
+
+### 5. User Logout
+
+**Endpoint:** `POST /auth/logout`
+
+**Description:** Logs out the currently logged-in user.
+
+### 6. Generate Forgot Password Link
+
+**Endpoint:** `POST /auth/forgot-password`
+
+**Description:** Sends a password reset link to the user's email.
+
+**Request Body:**
+```json
+{
+  "email": "string"
+}
+```
+
+### 7. Reset Password
+
+**Endpoint:** `POST /auth/reset-password`
+
+**Description:** Resets the user's password using a token.
+
+**Request Body:**
+```json
+{
+  "password": "string",
+  "activationToken": "string"
+}
+```
+
+### 8. Get All Users
+
+**Endpoint:** `GET /auth/users`
+
+**Description:** Retrieves all registered users.
+
+## Technologies Used
+
+- **NestJS:** A progressive Node.js framework for building efficient and scalable server-side applications.
+- **GraphQL:** A query language for your API that allows clients to request only the data they need.
+- **Prisma:** An open-source database toolkit for TypeScript and Node.js.
+- **MongoDB:** A NoSQL database for high availability and scalability.
+- **Gmail API:** Used for sending emails for user activation and password resets.
+
+## Security
+
+- Passwords are hashed using bcrypt before storage.
+- JWT tokens are used for secure authentication and authorization.
+- Activation and reset tokens are generated securely and have expiration times.
 
 ## Installation
 
-```bash
-$ npm install
-```
+To set up the project, follow these steps:
 
-## Running the app
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/crowdfunding-app.git
+   cd crowdfunding-app
+   ```
 
-```bash
-# development
-$ npm run start
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-# watch mode
-$ npm run start:dev
+3. Set up environment variables in a `.env` file (refer to `.env.example`).
 
-# production mode
-$ npm run start:prod
-```
-
-## Test
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+4. Start the application:
+   ```bash
+   npm run start
+   ```
 
 ## License
 
-Nest is [MIT licensed](LICENSE).
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [NestJS Documentation](https://docs.nestjs.com/)
+- [GraphQL Documentation](https://graphql.org/)
+- [Prisma Documentation](https://www.prisma.io/docs)
