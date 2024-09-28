@@ -71,8 +71,6 @@
       
 
 
-
-
 (define-read-only (get-campaign (campaign-id uint))
   (match (map-get? campaigns campaign-id)
     campaign (ok campaign) ;; If campaign is found, return it wrapped in `ok`
@@ -93,11 +91,10 @@
         donators: (get donators campaign-donators-data),
         donations: (get donations campaign-donators-data)
       }))
+    ;; If the campaign is not found, return an error
     err-campaign-not-found
   )
 )
-
-
 
 (define-public (donate-to-campaign (campaign-id uint))
   (let
@@ -146,7 +143,6 @@
 )
 
 
-
 (define-read-only (check-campaign-status (campaign-id uint))
   (match (map-get? campaigns campaign-id)
     campaign
@@ -178,7 +174,7 @@
            { title: new-title, 
              description: new-description, 
              image: new-image })))))
-
+             
 
 (define-public (withdraw-funds (campaign-id uint))
   (let (
@@ -208,3 +204,7 @@
       error err-transfer-failed)
   )
 )
+
+
+
+  
