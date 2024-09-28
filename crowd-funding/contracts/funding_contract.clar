@@ -147,20 +147,3 @@
 )
 
 
-(define-read-only (check-campaign-status (campaign-id uint))
-  (match (map-get? campaigns campaign-id)
-    campaign
-      (let ((amount-collected (get amount_collected campaign))
-            (target (get target campaign))
-            (deadline (get deadline campaign)))
-        (if (> block-height deadline)
-          (if (>= amount-collected target)
-            (ok "Campaign succeeded")
-            (ok "Campaign failed"))
-          (ok "Campaign is ongoing")))
-    (err err-campaign-not-found)
-  )
-)
-
-
-
