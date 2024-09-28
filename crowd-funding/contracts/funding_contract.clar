@@ -143,37 +143,4 @@
 )
 
 
-
-(define-read-only (check-campaign-status (campaign-id uint))
-  (match (map-get? campaigns campaign-id)
-    campaign
-      (let ((amount-collected (get amount_collected campaign))
-            (target (get target campaign))
-            (deadline (get deadline campaign)))
-        (if (> block-height deadline)
-          (if (>= amount-collected target)
-            (ok "Campaign succeeded")
-            (ok "Campaign failed"))
-          (ok "Campaign is ongoing")))
-    (err err-campaign-not-found)
-  )
-)
-
-(define-public (update-campaign 
-  (campaign-id uint)
-  (new-title (string-ascii 200))
-  (new-description (string-ascii 502))
-  (new-image (string-ascii 200)))
-  (let ((campaign (unwrap! (map-get? campaigns campaign-id) err-campaign-not-found)))
-
-    ;; Check if the caller is the campaign owner
-    (asserts! (is-eq tx-sender (get owner campaign)) err-invalid-owner)
-    
-    ;; Update the campaign
-    (ok (map-set campaigns campaign-id 
-         (merge campaign 
-           { title: new-title, 
-             description: new-description, 
-             image: new-image })))))
-
-
+  
